@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Voucher Generator</title>
+  <title>VLK Voucher Generator</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');
 
@@ -13,18 +13,25 @@
       color: #fff;
       margin: 0;
       padding: 20px;
+      overflow: hidden;
+    }
+    canvas#background {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
     }
     .container {
       max-width: 800px;
       margin: auto;
-      background: #111;
+      background: #111a;
       padding: 20px;
       border-radius: 12px;
       box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
       transition: transform 0.3s ease;
-    }
-    .container:hover {
-      transform: scale(1.01);
+      backdrop-filter: blur(10px);
     }
     h1 {
       text-align: center;
@@ -59,9 +66,28 @@
     button.generate { background: cyan; }
     button.generate:hover { background: #00ffffa0; transform: scale(1.05); }
     button.add { background: #fff; }
-    button.add:hover { background: #ddd; transform: scale(1.05); }
     button.clear { background: #333; color: cyan; }
     button.clear:hover { background: #222; transform: scale(1.05); }
+
+    .theme-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .theme-btn {
+      width: 25px;
+      height: 25px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      cursor: pointer;
+      transition: transform 0.3s;
+    }
+    .theme-btn:hover { transform: scale(1.2); }
+    .cyan-theme { background: cyan; }
+    .purple-theme { background: #b300ff; }
+    .gold-theme { background: gold; }
+
     .voucher-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -70,35 +96,24 @@
     }
     .voucher {
       background: linear-gradient(145deg, #000, #0ff2);
-      border: 1px solid cyan;
+      border: 2px solid cyan;
       border-radius: 10px;
       padding: 20px;
-      box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
       text-align: center;
       color: #fff;
       position: relative;
       overflow: hidden;
-      animation: fadeIn 0.6s ease forwards;
-      transform: translateY(10px);
+      animation: fadeIn 0.6s ease forwards, glow 4s infinite alternate;
     }
-    .voucher::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: radial-gradient(circle at center, rgba(0,255,255,0.1) 0%, transparent 70%);
-      animation: pulse 4s infinite;
+    @keyframes glow {
+      from { box-shadow: 0 0 10px cyan; }
+      to { box-shadow: 0 0 25px cyan; }
     }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(20px); }
       to { opacity: 1; transform: translateY(0); }
     }
-    @keyframes pulse {
-      0%, 100% { opacity: 0.4; }
-      50% { opacity: 1; }
-    }
+
     .voucher-code {
       font-family: monospace;
       font-size: 1.3em;
@@ -117,18 +132,39 @@
       background: linear-gradient(90deg, cyan, white, #00bcd4);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      margin-top: 10px;
       animation: shimmer 3s infinite linear;
     }
     @keyframes shimmer {
       0% { background-position: -200% 0; }
       100% { background-position: 200% 0; }
     }
+    .copy-btn {
+      margin-top: 8px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      background: #222;
+      color: cyan;
+      border: 1px solid cyan;
+      cursor: pointer;
+      font-size: 0.9em;
+      transition: all 0.3s ease;
+    }
+    .copy-btn:hover {
+      background: cyan;
+      color: black;
+    }
   </style>
 </head>
 <body>
+  <canvas id="background"></canvas>
   <div class="container">
-    <h1>Voucher Generator</h1>
+    <h1>VLK Voucher Generator</h1>
+    <div class="theme-buttons">
+      <div class="theme-btn cyan-theme" onclick="setTheme('cyan')"></div>
+      <div class="theme-btn purple-theme" onclick="setTheme('purple')"></div>
+      <div class="theme-btn gold-theme" onclick="setTheme('gold')"></div>
+    </div>
+
     <label>Voucher amount</label>
     <input type="text" id="value" value="£10" />
 
@@ -151,7 +187,48 @@
   </div>
 
   <script>
+    // Particle background
+    const canvas = document.getElementById('background');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    for (let i = 0; i < 70; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 2 + 1,
+        dx: (Math.random() - 0.5) * 0.5,
+        dy: (Math.random() - 0.5) * 0.5
+      });
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = 'cyan';
+      particles.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+        p.x += p.dx;
+        p.y += p.dy;
+        if (p.x < 0 || p.x > canvas.width) p.dx *= -1;
+        if (p.y < 0 || p.y > canvas.height) p.dy *= -1;
+      });
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    // Voucher logic
     let vouchers = [];
+    let currentTheme = 'cyan';
 
     function randomCode(len) {
       const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -185,6 +262,12 @@
       renderVouchers();
     }
 
+    function copyCode(code, btn) {
+      navigator.clipboard.writeText(code);
+      btn.textContent = 'Copied!';
+      setTimeout(() => (btn.textContent = 'Copy Code'), 1000);
+    }
+
     function renderVouchers() {
       const grid = document.getElementById('voucherGrid');
       grid.innerHTML = '';
@@ -195,8 +278,30 @@
           <div class="voucher-value">${v.value}</div>
           <div class="voucher-code">${v.code}</div>
           <div class="vlk-logo">VLK</div>
+          <button class="copy-btn" onclick="copyCode('${v.code}', this)">Copy Code</button>
         `;
         grid.appendChild(div);
+      });
+      applyTheme();
+    }
+
+    function setTheme(theme) {
+      currentTheme = theme;
+      applyTheme();
+    }
+
+    function applyTheme() {
+      const vouchersEl = document.querySelectorAll('.voucher');
+      vouchersEl.forEach((el, idx) => {
+        let color;
+        if (currentTheme === 'cyan') color = 'cyan';
+        else if (currentTheme === 'purple') color = '#b300ff';
+        else if (currentTheme === 'gold') color = 'gold';
+        el.style.borderColor = color;
+        el.style.boxShadow = `0 0 15px ${color}`;
+        el.querySelector('.voucher-code').style.color = color;
+        el.querySelector('.copy-btn').style.borderColor = color;
+        el.querySelector('.copy-btn').style.color = color;
       });
     }
   </script>

@@ -13,7 +13,8 @@
       color: #fff;
       margin: 0;
       padding: 20px;
-      overflow: hidden;
+      overflow-y: auto;
+      height: 100vh;
     }
     canvas#background {
       position: fixed;
@@ -187,7 +188,6 @@
   </div>
 
   <script>
-    // Particle background
     const canvas = document.getElementById('background');
     const ctx = canvas.getContext('2d');
     let particles = [];
@@ -226,7 +226,6 @@
     }
     animate();
 
-    // Voucher logic
     let vouchers = [];
     let currentTheme = 'cyan';
 
@@ -271,7 +270,7 @@
     function renderVouchers() {
       const grid = document.getElementById('voucherGrid');
       grid.innerHTML = '';
-      vouchers.forEach(v => {
+      vouchers.forEach((v, idx) => {
         const div = document.createElement('div');
         div.className = 'voucher';
         div.innerHTML = `

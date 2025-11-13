@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Voucher Generator</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');
+
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: #000;
@@ -108,18 +110,25 @@
       font-size: 1.5em;
       color: white;
     }
-    canvas {
+    .vlk-logo {
+      font-family: 'Great Vibes', cursive;
+      font-size: 2.2em;
+      font-weight: bold;
+      background: linear-gradient(90deg, cyan, white, #00bcd4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
       margin-top: 10px;
-      border: 1px solid cyan;
-      border-radius: 6px;
-      background: #000;
-      box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+      animation: shimmer 3s infinite linear;
+    }
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Voucher Generator (£)</h1>
+    <h1>Voucher Generator</h1>
     <label>Voucher amount</label>
     <input type="text" id="value" value="£10" />
 
@@ -141,7 +150,6 @@
     <div class="voucher-grid" id="voucherGrid"></div>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
   <script>
     let vouchers = [];
 
@@ -186,17 +194,9 @@
         div.innerHTML = `
           <div class="voucher-value">${v.value}</div>
           <div class="voucher-code">${v.code}</div>
-          <canvas id="qr-${v.code}"></canvas>
+          <div class="vlk-logo">VLK</div>
         `;
         grid.appendChild(div);
-
-        new QRious({
-          element: document.getElementById(`qr-${v.code}`),
-          value: v.code,
-          size: 100,
-          background: '#000',
-          foreground: 'cyan'
-        });
       });
     }
   </script>

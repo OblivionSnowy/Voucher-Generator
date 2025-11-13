@@ -1,167 +1,157 @@
-import React, { useState, useRef } from "react";
-import QRCode from "qrcode.react";
-
-export default function VoucherGenerator() {
-  const [value, setValue] = useState("$10 off");
-  const [prefix, setPrefix] = useState("GH-");
-  const [expiry, setExpiry] = useState("");
-  const [quantity, setQuantity] = useState(10);
-  const [length, setLength] = useState(8);
-  const [vouchers, setVouchers] = useState([]);
-  const [showQr, setShowQr] = useState(true);
-  const printRef = useRef();
-
-  function randomCode(len) {
-    const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // avoid ambiguous chars
-    let s = "";
-    for (let i = 0; i < len; i++) s += chars[Math.floor(Math.random() * chars.length)];
-    return s;
-  }
-
-  function generateOne() {
-    const code = prefix + randomCode(length);
-    return { code, value, expiry };
-  }
-
-  function generateBulk() {
-    const list = [];
-    for (let i = 0; i < Math.max(1, Number(quantity)); i++) {
-      list.push(generateOne());
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voucher Generator (£)</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f3f4f6;
+      margin: 0;
+      padding: 20px;
     }
-    setVouchers(list);
-  }
-
-  function addVoucher() {
-    setVouchers((s) => [generateOne(), ...s]);
-  }
-
-  function clear() {
-    setVouchers([]);
-  }
-
-  function downloadCSV() {
-    const rows = ["code,value,expiry"]; // header
-    vouchers.forEach((v) => rows.push([v.code, v.value, v.expiry].map(escapeCsv).join(",")));
-    const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "vouchers.csv";
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  function escapeCsv(s) {
-    if (s == null) return "";
-    if (String(s).includes(",") || String(s).includes('\n') || String(s).includes('"')) {
-      return '"' + String(s).replace(/"/g, '""') + '"';
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
-    return String(s);
-  }
+    h1 {
+      text-align: center;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      margin-top: 15px;
+      margin-right: 10px;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      color: white;
+    }
+    button.generate { background: #2563eb; }
+    button.add { background: #16a34a; }
+    button.clear { background: #6b7280; }
+    .voucher-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 20px;
+    }
+    .voucher {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 15px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .voucher-code {
+      font-family: monospace;
+      font-size: 1.2em;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+    canvas {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Voucher Generator (£)</h1>
+    <label>Voucher amount</label>
+    <input type="text" id="value" value="£10" />
 
-  function importCSV(file) {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target.result;
-      const rows = text.split(/\r?\n/).filter(Boolean);
-      const parsed = rows.map((r) => r.split(",")).map((cols) => ({ code: cols[0] ? cols[0].trim() : generateOne().code, value: cols[1] ? cols[1].trim() : value, expiry: cols[2] ? cols[2].trim() : expiry }));
-      setVouchers(parsed.concat(vouchers));
-    };
-    reader.readAsText(file);
-  }
+    <label>Prefix</label>
+    <input type="text" id="prefix" value="GH-" />
 
-  function handlePrint() {
-    // Use window.print(); print CSS below ensures printable layout.
-    window.print();
-  }
+    <label>Code length</label>
+    <input type="number" id="length" value="8" />
 
-  return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">GitHub Voucher Generator</h1>
+    <label>Quantity</label>
+    <input type="number" id="quantity" value="10" />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="col-span-2">
-          <label className="block mb-2">Voucher value/description</label>
-          <input value={value} onChange={(e) => setValue(e.target.value)} className="w-full p-2 border rounded" />
-        </div>
-        <div>
-          <label className="block mb-2">Expiry (optional)</label>
-          <input value={expiry} onChange={(e) => setExpiry(e.target.value)} className="w-full p-2 border rounded" placeholder="e.g. 2026-12-31" />
-        </div>
-
-        <div>
-          <label className="block mb-2">Prefix</label>
-          <input value={prefix} onChange={(e) => setPrefix(e.target.value)} className="w-full p-2 border rounded" />
-        </div>
-        <div>
-          <label className="block mb-2">Random code length</label>
-          <input type="number" value={length} onChange={(e) => setLength(e.target.value)} className="w-full p-2 border rounded" />
-        </div>
-        <div>
-          <label className="block mb-2">Quantity</label>
-          <input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} className="w-full p-2 border rounded" />
-        </div>
-
-        <div className="col-span-3 flex gap-2">
-          <button onClick={generateBulk} className="px-4 py-2 bg-blue-600 text-white rounded">Generate</button>
-          <button onClick={addVoucher} className="px-4 py-2 bg-green-600 text-white rounded">Add one</button>
-          <button onClick={clear} className="px-4 py-2 bg-gray-500 text-white rounded">Clear</button>
-          <button onClick={downloadCSV} disabled={vouchers.length===0} className="px-4 py-2 bg-indigo-600 text-white rounded">Export CSV</button>
-          <label className="px-4 py-2 bg-yellow-500 text-black rounded cursor-pointer">
-            Import CSV
-            <input type="file" accept=".csv" onChange={(e) => importCSV(e.target.files[0])} style={{ display: "none" }} />
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="checkbox" checked={showQr} onChange={(e) => setShowQr(e.target.checked)} /> Show QR
-          </label>
-          <button onClick={handlePrint} className="ml-auto px-4 py-2 bg-black text-white rounded">Print</button>
-        </div>
-      </div>
-
-      <div className="mb-4">
-        <strong>Preview / Printable cards</strong> — each card is print-ready. Use the Print button to produce a printable sheet.
-      </div>
-
-      <div ref={printRef} className="grid grid-cols-2 md:grid-cols-4 gap-4" id="voucher-canvas">
-        {vouchers.map((v, idx) => (
-          <div key={idx} className="voucher-card p-3 border rounded shadow-sm break-inside-avoid-page bg-white" style={{ minHeight: 160 }}>
-            <div className="flex justify-between items-start">
-              <div>
-                <div className="text-sm uppercase text-gray-500">Voucher</div>
-                <div className="text-xl font-bold">{v.value}</div>
-              </div>
-              <div className="text-xs text-gray-600">Expires: {v.expiry || '—'}</div>
-            </div>
-
-            <div className="mt-4 text-center">
-              <div className="text-lg font-mono text-2xl tracking-wider">{v.code}</div>
-            </div>
-
-            {showQr ? (
-              <div className="mt-3 flex justify-center">
-                {/* QR encodes a simple redemption URL placeholder — replace with your actual redemption URL pattern if needed */}
-                <QRCode value={window.location.origin + "/redeem?code=" + encodeURIComponent(v.code)} size={88} />
-              </div>
-            ) : null}
-
-            <div className="mt-3 text-xs text-gray-500">Generated: {new Date().toLocaleDateString()}</div>
-          </div>
-        ))}
-      </div>
-
-      <style>{`
-        /* Print styles */
-        @media print {
-          body * { visibility: hidden; }
-          #voucher-canvas, #voucher-canvas * { visibility: visible; }
-          #voucher-canvas { position: absolute; left: 0; top: 0; width: 100%; }
-          .voucher-card { page-break-inside: avoid; }
-        }
-
-        /* Basic card styling if Tailwind is missing */
-        .voucher-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; }
-      `}</style>
+    <div>
+      <button class="generate" onclick="generateBulk()">Generate</button>
+      <button class="add" onclick="addVoucher()">Add one</button>
+      <button class="clear" onclick="clearVouchers()">Clear</button>
     </div>
-  );
-}
+
+    <div class="voucher-grid" id="voucherGrid"></div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+  <script>
+    let vouchers = [];
+
+    function randomCode(len) {
+      const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+      let s = '';
+      for (let i = 0; i < len; i++) s += chars[Math.floor(Math.random() * chars.length)];
+      return s;
+    }
+
+    function generateOne() {
+      const value = document.getElementById('value').value;
+      const prefix = document.getElementById('prefix').value;
+      const length = parseInt(document.getElementById('length').value);
+      const code = prefix + randomCode(length);
+      return { code, value };
+    }
+
+    function generateBulk() {
+      const quantity = parseInt(document.getElementById('quantity').value);
+      vouchers = [];
+      for (let i = 0; i < quantity; i++) vouchers.push(generateOne());
+      renderVouchers();
+    }
+
+    function addVoucher() {
+      vouchers.unshift(generateOne());
+      renderVouchers();
+    }
+
+    function clearVouchers() {
+      vouchers = [];
+      renderVouchers();
+    }
+
+    function renderVouchers() {
+      const grid = document.getElementById('voucherGrid');
+      grid.innerHTML = '';
+      vouchers.forEach(v => {
+        const div = document.createElement('div');
+        div.className = 'voucher';
+        div.innerHTML = `
+          <div class="voucher-title">Voucher</div>
+          <div class="voucher-value">${v.value}</div>
+          <div class="voucher-code">${v.code}</div>
+          <canvas id="qr-${v.code}"></canvas>
+        `;
+        grid.appendChild(div);
+
+        const qr = new QRious({
+          element: document.getElementById(`qr-${v.code}`),
+          value: v.code,
+          size: 100
+        });
+      });
+    }
+  </script>
+</body>
+</html>
